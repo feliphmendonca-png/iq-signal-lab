@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>IQ Signal Lab — teste histórico</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#26364d;--text:#edf3fb;--muted:#a6b5ca;--accent:#7dd3fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:900px;margin:auto;padding:18px}h1{font-size:1.55rem;margin:0}h2{font-size:1.1rem;margin:0 0 10px}p{margin:8px 0}.muted{color:var(--muted);font-size:.92rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}.tag{border:1px solid #59728e;border-radius:999px;padding:4px 9px;font-size:.75rem;color:#cfe7ff}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:15px;margin:12px 0}
+label{display:block;font-weight:600;margin:8px 0}input,select,button{font:inherit;border-radius:10px;border:1px solid #3b506b;padding:11px;background:#0e1727;color:var(--text);max-width:100%}input[type=file]{width:100%}button{background:#164e63;border-color:#23718a;font-weight:700;cursor:pointer;width:100%;margin-top:10px}button:disabled{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{padding:12px;background:#0c1626;border:1px solid var(--line);border-radius:12px}.metric small{display:block;color:var(--muted)}.metric strong{font-size:1.25rem;overflow-wrap:anywhere}
+.signal{font-size:1.5rem;font-weight:800;text-align:center;padding:12px;border-radius:12px;background:#0c1626}.signal.call{color:#86efac}.signal.put{color:#fda4af}.signal.wait{color:#cbd5e1}
+details{margin-top:8px}code{overflow-wrap:anywhere;color:#bae6fd}.notice{border-left:3px solid #fbbf24;padding-left:10px}.small{font-size:.82rem}
+table{border-collapse:collapse;width:100%;font-size:.85rem}td,th{text-align:left;padding:7px;border-bottom:1px solid var(--line)}
+@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body><main>
+<header><div><h1>IQ Signal Lab</h1><div class="muted">Laboratório gratuito de análise histórica</div></div><span class="tag">SEM DINHEIRO REAL</span></header>
+<div class="card notice"><strong>Importante:</strong> esta é uma ferramenta experimental de estudo, não uma previsão garantida nem recomendação financeira. Ela não se conecta à IQ Option e não executa operações. Dados de forex normal não representam os preços OTC da corretora.</div>
+<div class="card">
+<h2>1. Carregar candles históricos (CSV)</h2>
+<p class="muted">Escolha um arquivo CSV com candles de 1 minuto. A ferramenta tenta reconhecer colunas de data/hora, open, high, low e close. O arquivo é processado localmente no navegador.</p>
+<label for="csvfile">Arquivo CSV</label><input id="csvfile" type="file" accept=".csv,.txt">
+<details><summary>Formato esperado</summary><p class="muted">Uma linha por candle, com cabeçalho. Exemplo:</p><code>timestamp,open,high,low,close<br>2026-01-01 10:00:00,1.1000,1.1010,1.0995,1.1005</code><p class="muted">Valores ilustrativos, não cotações reais. Separe colunas por vírgula ou ponto e vírgula. Use pelo menos 100 candles para um teste inicial.</p></details>
+<button id="analyze">Analisar arquivo</button>
+<div id="filemsg" class="muted" aria-live="polite">Nenhum arquivo carregado.</div>
+</div>
+<div class="card">
+<h2>2. Sinal atual do último candle</h2>
+<div id="signal" class="signal wait">AGUARDANDO DADOS</div>
+<p id="reason" class="muted">Carregue um CSV para calcular os indicadores.</p>
+<div class="grid">
+<div class="metric"><small>EMA 9</small><strong id="ema9">—</strong></div>
+<div class="metric"><small>EMA 21</small><strong id="ema21">—</strong></div>
+<div class="metric"><small>RSI 14</small><strong id="rsi">—</strong></div>
+<div class="metric"><small>Candles lidos</small><strong id="count">0</strong></div>
+</div>
+</div>
+<div class="card">
+<h2>3. Teste histórico simplificado</h2>
+<p class="muted">Regra de demonstração: EMA 9 acima da EMA 21 e RSI entre 50 e 70 gera CALL; EMA 9 abaixo da EMA 21 e RSI entre 30 e 50 gera PUT. A avaliação compara o fechamento do candle seguinte ao preço de fechamento do sinal. Isso não simula perfeitamente a entrada/expiração de uma opção binária.</p>
+<div class="grid">
+<div class="metric"><small>Sinais avaliados</small><strong id="trades">—</strong></div>
+<div class="metric"><small>Direção correta</small><strong id="wins">—</strong></div>
+<div class="metric"><small>Taxa direcional</small><strong id="rate">—</strong></div>
+<div class="metric"><small>Saldo de acertos − erros</small><strong id="net">—</strong></div>
+</div>
+<p id="testnote" class="muted">O teste só aparece depois de carregar dados suficientes.</p>
+</div>
+<div class="card">
+<h2>4. Próximos cuidados</h2>
+<ul>
+<li>Teste vários períodos e ativos, sem escolher apenas os melhores resultados.</li>
+<li>Reserve dados mais recentes para validação; não ajuste a regra usando todo o histórico.</li>
+<li>Use dados do mesmo provedor/preço da plataforma quando possível. OTC exige validação específica.</li>
+<li>Uma taxa direcional acima de 50% não garante lucro. Pagamento, expiração, atraso e custos mudam o resultado.</li>
+<li>Não envie senhas da corretora ou chaves de API para este arquivo.</li>
+</ul>
+</div>
+<p class="muted small">IQ Signal Lab é um projeto independente de estudo e não é afiliado à IQ Option.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let candles=[];
+function norm(s){return String(s||'').toLowerCase().trim().replace(/[^a-z0-9]/g,'')}
+function parseCSV(text){
+ const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+ if(lines.length<3)throw Error('O arquivo parece ter poucas linhas.');
+ const delim=(lines[0].split(';').length>lines[0].split(',').length)?';':',';
+ const rows=lines.map(l=>l.split(delim).map(x=>x.trim().replace(/^"|"$/g,'')));
+ const heads=rows[0].map(norm);
+ function idx(names){return heads.findIndex(h=>names.includes(h))}
+ let io=idx(['open','o','abertura']),ih=idx(['high','h','max','maximo']),il=idx(['low','l','min','minimo']),ic=idx(['close','c','fechamento','last']);
+ let it=idx(['timestamp','datetime','date','time','datatime','datahora','dateandtime']);
+ if([io,ih,il,ic].some(i=>i<0))throw Error('Não encontrei as colunas open, high, low e close. Confira o formato do CSV.');
+ let out=[];
+ for(let r of rows.slice(1)){
+  if(Math.max(io,ih,il,ic)>=r.length)continue;
+  const num=i=>Number(String(r[i]).replace(/\s/g,'').replace(',','.'));
+  const c={open:num(io),high:num(ih),low:num(il),close:num(ic),time:it>=0?r[it]:''};
+  if([c.open,c.high,c.low,c.close].every(Number.isFinite)&&c.high>=c.low)out.push(c);
+ }
+ if(out.length<40)throw Error('Foram encontrados menos de 40 candles válidos. Use um arquivo com pelo menos 100 para resultados mais úteis.');
+ return out;
+}
+function ema(vals,period){let out=Array(vals.length).fill(null),k=2/(period+1),s=0;for(let i=0;i<vals.length;i++){if(i<period-1)continue;if(i===period-1){s=vals.slice(0,period).reduce((a,b)=>a+b,0)/period;out[i]=s}else{ s=vals[i]*k+s*(1-k);out[i]=s}}return out}
+function rsi(vals,p=14){let out=Array(vals.length).fill(null);for(let i=p;i<vals.length;i++){let gain=0,loss=0;for(let j=i-p+1;j<=i;j++){let d=vals[j]-vals[j-1];if(d>0)gain+=d;else loss-=d}out[i]=loss===0?100:100-(100/(1+gain/loss))}return out}
+function run(){
+ const closes=candles.map(c=>c.close),e9=ema(closes,9),e21=ema(closes,21),rs=rsi(closes,14),n=closes.length,last=n-1;
+ $('count').textContent=n.toLocaleString('pt-BR');
+ $('ema9').textContent=e9[last]?.toPrecision(7)??'—';$('ema21').textContent=e21[last]?.toPrecision(7)??'—';$('rsi').textContent=rs[last]?.toFixed(1)??'—';
+ const sig=i=>{if(e9[i]==null||e21[i]==null||rs[i]==null)return 0;if(e9[i]>e21[i]&&rs[i]>=50&&rs[i]<=70)return 1;if(e9[i]<e21[i]&&rs[i]>=30&&rs[i]<=50)return -1;return 0};
+ const s=sig(last),el=$('signal');el.className='signal '+(s===1?'call':s===-1?'put':'wait');el.textContent=s===1?'CALL (ALTA)':s===-1?'PUT (BAIXA)':'AGUARDAR';
+ $('reason').textContent=s===1?'Regra de teste: EMA 9 acima da EMA 21 e RSI entre 50 e 70.':s===-1?'Regra de teste: EMA 9 abaixo da EMA 21 e RSI entre 30 e 50.':'A regra de demonstração não encontrou alinhamento suficiente.';
+ let trades=0,wins=0,errors=0;
+ for(let i=22;i<n-1;i++){let z=sig(i);if(!z)continue;trades++;let move=candles[i+1].close-candles[i].close;if((z===1&&move>0)||(z===-1&&move<0))wins++;else errors++}
+ $('trades').textContent=trades.toLocaleString('pt-BR');$('wins').textContent=wins.toLocaleString('pt-BR');$('rate').textContent=trades?(100*wins/trades).toFixed(1)+'%':'—';$('net').textContent=trades?(wins-errors>0?'+':'')+(wins-errors):'—';
+ $('testnote').textContent=trades?'Resultado direcional bruto em candles históricos, sem payout, spread, latência ou simulação exata de expiração. Não representa lucro esperado.':'Nenhum sinal suficiente para avaliar neste arquivo.';
+}
+$('analyze').addEventListener('click',async()=>{
+ const f=$('csvfile').files[0];if(!f){$('filemsg').textContent='Escolha um arquivo CSV primeiro.';return}
+ $('filemsg').textContent='Lendo arquivo…';
+ try{candles=parseCSV(await f.text());run();$('filemsg').textContent='Arquivo lido localmente: '+f.name+'. Candles válidos: '+candles.length+'.';}
+ catch(e){$('filemsg').textContent='Não foi possível analisar: '+e.message}
+});
+</script>
+</body></html>
